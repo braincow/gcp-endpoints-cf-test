@@ -1,0 +1,49 @@
+swagger: '2.0'
+info:
+  title: Cloud Endpoints and GCF Hello World
+  description: Simple test API to demonstrate ESPv2Beta with Cloud Functions backend.
+  version: 1.1.0
+host: HOST
+schemes:
+  - https
+produces:
+  - application/json
+paths:
+  /hello:
+    get:
+      summary: Greet a user
+      operationId: hello
+      x-google-backend:
+        address: https://REGION-FUNCTIONS_PROJECT_ID.cloudfunctions.net/hello_get
+        protocol: h2
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                description: A greeting.
+  /hello/{name}:
+    get:
+      summary: Greet a user with their name in the message
+      operationId: helloname
+      x-google-backend:
+        address: https://REGION-FUNCTIONS_PROJECT_ID.cloudfunctions.net/helloname_get
+        protocol: h2
+      parameters:
+      - in: path
+        name: name
+        required: true
+        type: string
+        description: Your name
+      responses:
+        '200':
+          description: A successful response
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                description: A greeting with your name in it!

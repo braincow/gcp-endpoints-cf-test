@@ -1,0 +1,62 @@
+substitutions:
+  _DEPLOYMENT_REGION: europe-west1
+  _SERVICE_NAME: service-proxy
+
+steps:
+# deploy the cloudfunction for helloname_get
+#  https://cloud.google.com/cloud-build/docs/deploying-builds/deploy-functions
+- name: gcr.io/cloud-builders/gcloud
+  args:
+  - functions
+  - deploy
+  - helloname_get
+  - --region
+  - $_DEPLOYMENT_REGION
+  - --runtime
+  - python37
+  - --source
+  - ./helloname_get/
+  - --trigger-http
+# modify the OpenAPI to reflect our deployment properties and names
+- name: gcr.io/cloud-builders/gcloud
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    set -x
+    sed -i "s/REGION-FUNCTIONS_PROJECT_ID/$_DEPLOYMENT_REGION-$PROJECT_ID/g" openapi-functions.update.yaml
+    sed -i "s/HOST/$( gcloud run services list --platform=managed --format 'value(URL)' --filter 'SERVICE:$_SERVICE_NAME'| sed -e 's/https:\/\///g' )/g" openapi-functions.update.yaml
+    cat openapi-functions.update.yaml
+# apply the OpenAPI definition to create an endpoint and point it to ESPv2Beta container
+- name: gcr.io/cloud-builders/gcloud
+  args:
+  - endpoints
+  - services
+  - deploy
+  - openapi-functions.update.yaml
+# rebuild the ESP container as required per documentation
+#  https://cloud.google.com/endpoints/docs/openapi/get-started-cloud-functions
+- name: gcr.io/cloud-builders/gcloud
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    set -x
+    curl -O https://raw.githubusercontent.com/GoogleCloudPlatform/esp-v2/master/docker/serverless/gcloud_build_image
+    chmod +x gcloud_build_image
+    ./gcloud_build_image \
+      -s $( gcloud run services list --platform=managed --format 'value(URL)' --filter 'SERVICE:$_SERVICE_NAME'| sed -e 's/https:\/\///g' ) \
+      -c $( gcloud endpoints configs list --service=$( gcloud endpoints services list --filter="$_SERVICE_NAME" --format="value(NAME)" ) --format="value(CONFIG_ID)" |head -n1 ) -p $PROJECT_ID
+# redeploy the ESP container from the one built in previous step by different cloudbuild job
+- name: gcr.io/cloud-builders/gcloud
+  entrypoint: bash
+  args:
+  - -c
+  - |
+    set -x
+    gcloud run deploy $_SERVICE_NAME \
+      --region $_DEPLOYMENT_REGION \
+      --image gcr.io/$PROJECT_ID/endpoints-runtime-serverless:$( gcloud run services list --platform=managed --format 'value(URL)' --filter 'SERVICE:$_SERVICE_NAME'| sed -e 's/https:\/\///g' )-$( gcloud endpoints configs list --service=$( gcloud endpoints services list --filter="$_SERVICE_NAME" --format="value(NAME)" ) --format="value(CONFIG_ID)" |head -n1 ) \
+      --set-env-vars=ESPv2_ARGS=--cors_preset=basic \
+      --allow-unauthenticated \
+      --platform managed
