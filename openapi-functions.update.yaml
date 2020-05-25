@@ -4,6 +4,13 @@ info:
   description: Simple test API to demonstrate ESPv2Beta with Cloud Functions backend.
   version: 1.1.0
 host: HOST
+securityDefinitions:
+  # This section configures basic authentication with an API key.
+  api_key:
+    type: "apiKey"
+    name: "key"
+    in: "query"
+security: []
 schemes:
   - https
 produces:
@@ -27,6 +34,8 @@ paths:
                 description: A greeting.
   /hello/{name}:
     get:
+      security:
+      - api_key: []
       summary: Greet a user with their name in the message
       operationId: helloname
       x-google-backend:

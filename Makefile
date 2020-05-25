@@ -13,6 +13,9 @@ none:
 enable-cloudbuild-api:
 	gcloud --project ${GCP_PROJECT} services enable cloudbuild.googleapis.com
 
+enable-servicecontrol-api:
+	gcloud --project ${GCP_PROJECT} services enable servicecontrol.googleapis.com
+
 ## create targets
 
 grant-security-roles-for-cloudbuild: enable-cloudbuild-api
@@ -35,9 +38,20 @@ cloudbuild-create: grant-security-roles-for-cloudbuild
 
 ## update targets
 
-cloudbuild-update:
+cloudbuild-update: enable-servicecontrol-update
 	gcloud --project ${GCP_PROJECT} builds submit --config cloudbuild.update.yaml \
 		--substitutions=_DEPLOYMENT_REGION=${GCP_REGION},_SERVICE_NAME=${SERVICE_NAME}
+	@echo ""
+	@echo "Enable your new shiny API for your project with make target 'enable-test-api'"
+	@echo ""
+
+enable-test-api:
+	gcloud --project ${GCP_PROJECT} services enable \
+		$(shell gcloud --project ${GCP_PROJECT} endpoints services list --filter="${SERVICE_NAME}" --format="value(NAME)")
+	@echo ""
+	@echo "Head to gcp console apis & services > credentials menu and create a new API key with access to your new api."
+	@echo "Now you can call the /hello/{name} api with ?key= query variable to gain access."
+	@echo ""
 
 ## runtime!
 
@@ -48,9 +62,10 @@ query-hello-api:
 	@echo
 
 query-helloname-api:
+	read -p "API key: " KEY && \
 	curl --request GET \
 		--header "Content-Type: application/json" \
-		https://$(shell gcloud --project ${GCP_PROJECT} endpoints services list --filter="${SERVICE_NAME}" --format="value(NAME)")/hello/${USER} |jq
+		https://$(shell gcloud --project ${GCP_PROJECT} endpoints services list --filter="${SERVICE_NAME}" --format="value(NAME)")/hello/$$USERNAME?key=$$KEY |jq
 	@echo
 
 ## cleanup targets

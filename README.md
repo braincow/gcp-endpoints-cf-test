@@ -13,9 +13,11 @@ Makefile targets available:
 * all - executes none
 * none - taunts you if executed
 * enable-cloudbuild-api - enables cloudbuild service api if not yet enabled
+* enable-servicecontrol-api - enables servicecontrol api if not yet enabled
 * grant-security-roles-for-cloudbuild - executes enable-cloudbuild-api and grants required roles for cloudbuild service user afterwards
 * cloudbuild-create - executes grant-security-roles-for-cloudbuild and submits cloudbuild.create.yaml file for Cloudbuild to run.
-* cloudbuild-update - submits cloudbuild.update.yaml file for Cloudbuild to run.
+* cloudbuild-update - executes enable-servicecontrol-api and submits cloudbuild.update.yaml file for Cloudbuild to run.
+* enable-test-api - enables our API after building it. After this API key's can be created.
 * query-hello-api - uses curl to send a request to the API endpoint. Parses output with jq command to make output look nice.
 * query-helloname-api - uses curl to send a request to API endpoint. As a name parameter it uses $USER environment variable. Parses output with jq.
 * delete-func - delete cloud functions created by CloudBuild
